@@ -1,0 +1,51 @@
+{
+  "name": "people-analytics-desktop",
+  "productName": "People Analytics",
+  "version": "0.1.0",
+  "private": true,
+  "description": "아이센스에프앤비 피플 애널리틱스 — Windows 설치형 (Electron 래퍼, 웹 코어 remote-load)",
+  "author": "(주)아이센스에프앤비 <admin@isens.camp>",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "camp.isens.people-analytics",
+    "productName": "People Analytics",
+    "copyright": "Copyright © 2026 (주)아이센스에프앤비 (iSens F&B)",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "fallback.html"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "People Analytics",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico"
+    }
+  }
+}
