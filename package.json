@@ -1,7 +1,7 @@
 {
   "name": "people-analytics-desktop",
   "productName": "People Analytics",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "아이센스에프앤비 피플 애널리틱스 — Windows 설치형 (Electron 래퍼, 웹 코어 remote-load)",
   "author": "(주)아이센스에프앤비 <admin@isens.camp>",
@@ -18,6 +18,7 @@
     "appId": "camp.isens.people-analytics",
     "productName": "People Analytics",
     "copyright": "Copyright © 2026 (주)아이센스에프앤비 (iSens F&B)",
+    "asar": true,
     "directories": {
       "buildResources": "build",
       "output": "dist"

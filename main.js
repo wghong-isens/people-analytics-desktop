@@ -1,11 +1,12 @@
 'use strict';
 
-const { app, BrowserWindow, Menu, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, shell, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
 const DEFAULT_SERVER_URL = 'http://localhost:3000';
 const FALLBACK_FILE = path.join(__dirname, 'fallback.html');
+const IS_DEV = !app.isPackaged;
 
 let mainWindow = null;
 
@@ -56,6 +57,23 @@ function isValidServerUrl(value) {
   }
 }
 
+function safeOrigin(value) {
+  try {
+    return new URL(value).origin;
+  } catch (err) {
+    return null;
+  }
+}
+
+// 현재 서버 오리진과 다른 http/https 주소인지(=외부 링크) 판정
+function isExternalHttpUrl(url) {
+  if (typeof url !== 'string') return false;
+  if (!(url.startsWith('http://') || url.startsWith('https://'))) return false;
+  const serverOrigin = safeOrigin(getServerUrl());
+  const targetOrigin = safeOrigin(url);
+  return !!(serverOrigin && targetOrigin && serverOrigin !== targetOrigin);
+}
+
 // ---------------------------------------------------------------------------
 // 창 생성
 // ---------------------------------------------------------------------------
@@ -69,8 +87,10 @@ function createWindow() {
     title: '피플 애널리틱스',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
+      contextIsolation: true, // 렌더러와 preload 컨텍스트 분리
+      nodeIntegration: false, // 렌더러에서 Node 직접 접근 차단
+      sandbox: true, // 렌더러 샌드박스 활성화(방어적 명시)
+      webSecurity: true, // 동일 출처 정책 등 웹 보안 유지
     },
   });
 
@@ -79,19 +99,17 @@ function createWindow() {
     if (!isMainFrame) return;
     // -3 (ERR_ABORTED)은 정상적인 내비게이션 취소인 경우가 많아 무시
     if (errorCode === -3) return;
+    // fallback.html 자체 로드 실패 시 재로딩 루프 방지
+    if (validatedURL && validatedURL.startsWith('file://')) return;
     mainWindow.loadFile(FALLBACK_FILE);
   });
 
-  // 새 창(window.open, target=_blank)은 차단하고 외부 브라우저로 열기
+  // 새 창(window.open, target=_blank)은 차단하고, 외부 링크는 기본 브라우저로
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('http://') || url.startsWith('https://')) {
-      const serverOrigin = safeOrigin(getServerUrl());
-      const targetOrigin = safeOrigin(url);
-      if (serverOrigin && targetOrigin && serverOrigin !== targetOrigin) {
-        shell.openExternal(url);
-        return { action: 'deny' };
-      }
-      // 같은 서버 오리진이라도 새 창 대신 현재 창에서 연다
+    if (isExternalHttpUrl(url)) {
+      shell.openExternal(url);
+    } else if (url.startsWith('http://') || url.startsWith('https://')) {
+      // 같은 서버 오리진이면 새 창 대신 현재 창에서 연다
       mainWindow.loadURL(url);
     }
     return { action: 'deny' };
@@ -99,10 +117,8 @@ function createWindow() {
 
   // 외부 오리진으로의 내비게이션도 외부 브라우저로 위임
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    const serverOrigin = safeOrigin(getServerUrl());
-    const targetOrigin = safeOrigin(url);
     if (url.startsWith('file://')) return; // fallback.html 허용
-    if (serverOrigin && targetOrigin && serverOrigin !== targetOrigin) {
+    if (isExternalHttpUrl(url)) {
       event.preventDefault();
       shell.openExternal(url);
     }
@@ -115,12 +131,27 @@ function createWindow() {
   mainWindow.loadURL(getServerUrl());
 }
 
-function safeOrigin(value) {
-  try {
-    return new URL(value).origin;
-  } catch (err) {
-    return null;
-  }
+// ---------------------------------------------------------------------------
+// 세션/콘텐츠 보안 하드닝
+// ---------------------------------------------------------------------------
+
+function hardenSecurity() {
+  // 권한 요청(카메라·마이크·위치·알림 등)은 기본 차단 — 대시보드 앱은 불필요
+  session.defaultSession.setPermissionRequestHandler((wc, permission, callback) => {
+    callback(false);
+  });
+  session.defaultSession.setPermissionCheckHandler(() => false);
+
+  // 모든 web-contents 공통 하드닝: webview 첨부 차단, 새 창/외부 내비 위임
+  app.on('web-contents-created', (event, contents) => {
+    contents.on('will-attach-webview', (e) => {
+      e.preventDefault(); // <webview> 첨부 차단
+    });
+    contents.setWindowOpenHandler(({ url }) => {
+      if (isExternalHttpUrl(url)) shell.openExternal(url);
+      return { action: 'deny' };
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -149,6 +180,25 @@ ipcMain.handle('set-server-url', (event, url) => {
 
 function buildMenu() {
   const isMac = process.platform === 'darwin';
+
+  // 개발자 도구는 개발(비패키지) 빌드에서만 노출
+  const viewSubmenu = [
+    { role: 'reload', label: '새로고침' },
+    {
+      label: '강력 새로고침',
+      accelerator: 'Shift+CmdOrCtrl+R',
+      click: () => {
+        if (mainWindow) mainWindow.webContents.reloadIgnoringCache();
+      },
+    },
+    ...(IS_DEV ? [{ role: 'toggleDevTools', label: '개발자 도구' }] : []),
+    { type: 'separator' },
+    { role: 'resetZoom', label: '실제 크기' },
+    { role: 'zoomIn', label: '확대' },
+    { role: 'zoomOut', label: '축소' },
+    { type: 'separator' },
+    { role: 'togglefullscreen', label: '전체 화면' },
+  ];
 
   const template = [
     // 앱 메뉴
@@ -184,23 +234,7 @@ function buildMenu() {
     // 보기
     {
       label: '보기',
-      submenu: [
-        { role: 'reload', label: '새로고침' },
-        {
-          label: '강력 새로고침',
-          accelerator: 'Shift+CmdOrCtrl+R',
-          click: () => {
-            if (mainWindow) mainWindow.webContents.reloadIgnoringCache();
-          },
-        },
-        { role: 'toggleDevTools', label: '개발자 도구' },
-        { type: 'separator' },
-        { role: 'resetZoom', label: '실제 크기' },
-        { role: 'zoomIn', label: '확대' },
-        { role: 'zoomOut', label: '축소' },
-        { type: 'separator' },
-        { role: 'togglefullscreen', label: '전체 화면' },
-      ],
+      submenu: viewSubmenu,
     },
     // 서버
     {
@@ -235,18 +269,33 @@ function buildMenu() {
 }
 
 // ---------------------------------------------------------------------------
-// 앱 라이프사이클
+// 앱 라이프사이클 (단일 인스턴스 보장)
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(() => {
-  buildMenu();
-  createWindow();
+const gotTheLock = app.requestSingleInstanceLock();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  // 두 번째 실행 시 기존 창을 포커스
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
   });
-});
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+  app.whenReady().then(() => {
+    hardenSecurity();
+    buildMenu();
+    createWindow();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+  });
+}
