@@ -4,7 +4,7 @@ const { app, BrowserWindow, Menu, ipcMain, shell, session } = require('electron'
 const path = require('path');
 const fs = require('fs');
 
-const DEFAULT_SERVER_URL = 'http://localhost:3000';
+const DEFAULT_SERVER_URL = 'https://pa-isens.vercel.app';
 const FALLBACK_FILE = path.join(__dirname, 'fallback.html');
 const IS_DEV = !app.isPackaged;
 

@@ -2,7 +2,7 @@
 
 **iSENS People Analytics** 데스크톱 애플리케이션 (Windows / Electron).
 
-사내 People Analytics 웹 서버(`http://localhost:3000` 또는 사내 서버 주소)에 연결하는
+People Analytics 정식 배포(`https://pa-isens.vercel.app`, 기본값) 또는 사내 서버 주소에 연결하는
 가벼운 Electron 래퍼입니다. 서버에 연결할 수 없을 때는 iSENS 로고가 표시된 연결 안내
 화면에서 서버 주소를 직접 입력해 다시 연결할 수 있습니다.
 

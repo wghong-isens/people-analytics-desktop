@@ -1,7 +1,7 @@
 {
   "name": "people-analytics-desktop",
   "productName": "People Analytics",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "아이센스에프앤비 피플 애널리틱스 — Windows 설치형 (Electron 래퍼, 웹 코어 remote-load)",
   "author": "(주)아이센스에프앤비 <admin@isens.camp>",
@@ -11,8 +11,8 @@
     "dist": "electron-builder --win nsis"
   },
   "devDependencies": {
-    "electron": "^31.7.7",
-    "electron-builder": "^24.13.3"
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
   },
   "build": {
     "appId": "camp.isens.people-analytics",

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.2 — 2026-10-07 · 기본 서버 주소를 정식 배포 주소로 변경
+
+- **기본 서버 주소** `http://localhost:3000` → `https://pa-isens.vercel.app` (People Analytics 정식 배포, Google Workspace SSO).
+  기존 설치본에서 저장된 `config.json`의 주소는 그대로 유지되므로, 연결 안내 화면에서 새 주소로 바꿔 저장하면 됩니다.
+- 연결 안내 화면(`fallback.html`)의 예시 주소도 정식 주소로 교체.
+- 빌드 도구 버전 고정(electron 31.7.7 · electron-builder 24.13.3) — 재현 가능한 빌드.
+
 ## v0.1.1 — 2026-08-26 · 보안·안정성 하드닝
 
 코드 리뷰(Fowler smell) · 보안 리뷰(OWASP) · Electron 보안 베스트프랙티스 기준으로

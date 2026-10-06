@@ -108,7 +108,7 @@
 
     <div class="field">
       <label for="server-url">서버 주소</label>
-      <input id="server-url" type="url" placeholder="http://localhost:3000" spellcheck="false" autocomplete="off" />
+      <input id="server-url" type="url" placeholder="https://pa-isens.vercel.app" spellcheck="false" autocomplete="off" />
     </div>
 
     <div class="buttons">
@@ -126,8 +126,8 @@
       function showError(message) { status.textContent = message; }
       if (window.desktop && window.desktop.getServerUrl) {
         window.desktop.getServerUrl().then(function (url) {
-          input.value = url || 'http://localhost:3000';
-        }).catch(function () { input.value = 'http://localhost:3000'; });
+          input.value = url || 'https://pa-isens.vercel.app';
+        }).catch(function () { input.value = 'https://pa-isens.vercel.app'; });
       }
       function connect(url) {
         if (!window.desktop || !window.desktop.setServerUrl) {
